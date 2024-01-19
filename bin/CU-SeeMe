@@ -1,0 +1,51 @@
+#!/bin/sh
+
+verbosity="--really-quiet"
+device="/dev/video"
+#resolution="640x360"
+resolution="432x240"
+#framerate="30"
+framerate="60"
+
+while [ $# -gt 0 ]; do
+  case $1 in
+    -v|--verbose)
+      verbosity="";
+      shift
+      ;;
+  esac
+done
+
+# enable video recording, as needed
+video_enabled=$(sysctl -n kern.video.record)
+if [ $video_enabled -ne 1 ] ; then
+  echo "Enabling kern.video.record..."
+  ! doas sysctl kern.video.record=1 && "ERROR: Unable to enable kern.video.record! Exiting." && exit 1
+fi
+
+echo "Reconfiguring video input device..."
+video -d
+video white_balance_temperature=2500
+video backlight_compensation=0
+
+echo "Opening CU-SeeMe..."
+mpv $verbosity \
+  --no-hidpi-window-scale \
+  --profile=low-latency \
+  --untimed \
+  --no-audio \
+  --mute=yes \
+  --no-osc \
+  --osd-level=0 \
+  --title="CU-SeeMe" \
+  --vo=gpu \
+  --saturation=-100 \
+  --contrast=50 \
+  --demuxer-lavf-o=video_size=${resolution},framerate=${framerate},input_format=mjpeg \
+  av://v4l2:${device}
+
+# disable video recording again, as needed
+if [ $video_enabled -ne 1 ] ; then
+  echo "Disabling kern.video.record..."
+  ! doas sysctl kern.video.record=0 && "ERROR: Unable to disable kern.video.record!"
+fi
