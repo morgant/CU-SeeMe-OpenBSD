@@ -42,6 +42,7 @@ mpv $verbosity \
   --vo=gpu \
   --saturation=-100 \
   --contrast=50 \
+  --vf=hflip \
   --demuxer-lavf-o=video_size=${resolution},framerate=${framerate},input_format=mjpeg \
   av://v4l2:${device}
 
