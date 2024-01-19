@@ -1,0 +1,12 @@
+Menu CUSeeMe-File, Label "File", Left
+"Quit" Action SendMessage N+q
+END
+
+MenuBar CUSeeMe
+CUSeeMe-File
+END
+
+Style
+"CU-SeeMe" NoSBarH, NoSBarV, NoResizeR, NoMinMaxR, Sticky, StayOnTop, SkipSelect
+"CU-SeeMe" MiniIcon CU-SeeMe.xpm, MenuBar CUSeeMe
+END

@@ -38,6 +38,7 @@ mpv $verbosity \
   --no-osc \
   --osd-level=0 \
   --title="CU-SeeMe" \
+  --x11-name="CU-SeeMe" \
   --vo=gpu \
   --saturation=-100 \
   --contrast=50 \
