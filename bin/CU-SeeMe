@@ -2,9 +2,9 @@
 
 verbosity="--really-quiet"
 device="/dev/video"
-#resolution="640x360"
-resolution="432x240"
-#framerate="30"
+resolution="432x240"  # standard X11 geometry format, so 'WxH'
+x=-20                 # standard X11 geometry format, so '+X' means X from left and '-X' means X from right
+y=-40                 # standard X11 geometry format, so '+Y' means Y from top and '-Y' means Y from bottom
 framerate="60"
 
 while [ $# -gt 0 ]; do
@@ -37,6 +37,8 @@ mpv $verbosity \
   --mute=yes \
   --no-osc \
   --osd-level=0 \
+  --force-window=yes \
+  --geometry=${resolution}${x}${y} \
   --title="CU-SeeMe" \
   --x11-name="CU-SeeMe" \
   --vo=gpu \
