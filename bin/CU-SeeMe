@@ -4,7 +4,7 @@
 #
 # LICENSE:
 #
-# Copyright (c) 2023-2024 Morgan Aldridge
+# Copyright (c) 2023-2025 Morgan Aldridge
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy 
 # of this software and associated documentation files (the "Software"), to deal
@@ -31,6 +31,7 @@ resolution="432x240"  # standard X11 geometry format, so 'WxH'
 x=-20                 # standard X11 geometry format, so '+X' means X from left and '-X' means X from right
 y=-40                 # standard X11 geometry format, so '+Y' means Y from top and '-Y' means Y from bottom
 framerate="60"
+shader="noise"
 
 while [ $# -gt 0 ]; do
   case $1 in
@@ -54,9 +55,12 @@ video white_balance_temperature=2500
 video backlight_compensation=0
 
 echo "Opening CU-SeeMe..."
+
+DISPLAY="${DISPLAY:-:0}" \
 mpv $verbosity \
   --no-hidpi-window-scale \
   --profile=low-latency \
+  --glsl-shaders-append="$HOME/.config/mpv/shaders/${shader}.glsl" \
   --untimed \
   --no-audio \
   --mute=yes \
