@@ -40,7 +40,6 @@ resolution="320x240"  # standard X11 geometry format, so 'WxH'
 x=-20                 # standard X11 geometry format, so '+X' means X from left and '-X' means X from right
 y=-40                 # standard X11 geometry format, so '+Y' means Y from top and '-Y' means Y from bottom
 framerate="15"
-#shader="noise"
 
 # convert a 0..16 integer to a hex color string (e.g. "0xffffff")
 hex_gray() {
@@ -128,7 +127,6 @@ DISPLAY="${DISPLAY:-:0}" \
 mpv $verbosity \
   --no-hidpi-window-scale \
   --profile=low-latency \
-  --glsl-shaders-append="$HOME/.config/mpv/shaders/${shader}.glsl" \
   --untimed \
   --no-audio \
   --mute=yes \
