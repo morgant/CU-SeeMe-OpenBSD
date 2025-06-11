@@ -1,6 +1,15 @@
 #!/bin/sh
 
-# CU-SeeMe -  faux CU-SeeMe webcam view powered by mpv 
+# CU-SeeMe -  Faux CU-SeeMe webcam view powered by mpv 
+#
+# Emulates a Connectix QuickCam (<https://en.wikipedia.org/wiki/QuickCam>):
+#
+# - Extracts only the luma channel (Y) from the video for efficient capture
+#   in grayscale (see <https://stackoverflow.com/a/77002805>)
+# - Scales image down to 320x240 resolution
+# - Flips image horizontally
+# - Converts to a 16-gray color palette (roughly based on
+#   <https://www.reddit.com/r/ffmpeg/comments/gmz3s0/convert_video_to_two_color_grayscale/fr6r99j/>)
 #
 # LICENSE:
 #
@@ -27,11 +36,70 @@
 
 verbosity="--really-quiet"
 device="/dev/video"
-resolution="432x240"  # standard X11 geometry format, so 'WxH'
+resolution="320x240"  # standard X11 geometry format, so 'WxH'
 x=-20                 # standard X11 geometry format, so '+X' means X from left and '-X' means X from right
 y=-40                 # standard X11 geometry format, so '+Y' means Y from top and '-Y' means Y from bottom
-framerate="60"
-shader="noise"
+framerate="15"
+#shader="noise"
+
+# convert a 0..16 integer to a hex color string (e.g. "0xffffff")
+hex_gray() {
+  printf "0x"
+  local _i=0
+  for _i in $(seq 1 6) ; do printf "%x" "$1" ; done
+}
+
+# filtergraph to generate 1-bit grayscale (monochrome) palette
+#
+# unused, but was my initial experiment with using a color palette
+# and it looks awesome using "dither=none"
+monochrome_palette() {
+  local _out="$1"
+
+  printf "color=c=0x000000:r=1:d=1:s=8x16,format=rgb24 [b];\
+    color=c=0xffffff:r=1:d=1:s=8x16,format=rgb24 [w];\
+    [b] [w] hstack=2 [%s]" "$_out"
+}
+
+# filtergraph to generate 4-bit grayscale (16 grays) palette
+grayscale_4bit_palette() {
+  local _out="$1"
+
+  # generate 16 different 4x4 pixel swatches of grays and arrange
+  # them in a 4x4 tile (resulting palette must be 256x256)
+  #
+  # See also:
+  # - <https://ffmpeg.org/ffmpeg-filters.html#toc-xstack-1>
+  # - <https://trac.ffmpeg.org/wiki/Create%20a%20mosaic%20out%20of%20several%20input%20videos%20using%20xstack>
+  local _color_defs=""
+  local _color_names=""
+  local _i=0
+  for _i in $(seq 0 15) ; do
+    local _name="$(printf "gray%02i" "$_i")"
+    local _hex="$(hex_gray "$_i")"
+    _color_defs="$(printf "%scolor=c=%s:r=1:d=1:s=4x4,format=rgb24 [%s];" "$_color_defs" "$_hex" "$_name")"
+    _color_names="$(printf "%s [%s]" "$_color_names" "$_name")"
+  done
+  printf \
+    "%s %s xstack=inputs=16:layout=0_0|0_h0|0_h0+h1|0_h0+h1+h2|w0_0|w0_h0|w0_h0+h1|w0_h0+h1+h2|w0+w4_0|w0+w4_h0|w0+w4_h0+h1|w0+w4_h0+h1+h2|w0+w4+w8_0|w0+w4+w8_h0|w0+w4+w8_h0+h1|w0+w4+w8_h0+h1+h2 [%s]" \
+    "$_color_defs" \
+    "$_color_names" \
+    "$_out"
+}
+
+# filtergraph to convert input video to 16 grayscale palette
+grayscale_4bit_filtergraph() {
+  local _in="$1"
+  local _out="$2"
+
+  local _dither="floyd_steinberg" # also try "none"
+  printf \
+    "%s; [%s] [palette] paletteuse=new=false:dither=%s,format=yuv420p [%s]" \
+    "$(grayscale_4bit_palette "palette")" \
+    "$_in" \
+    "$_dither" \
+    "$_out"
+}
 
 while [ $# -gt 0 ]; do
   case $1 in
@@ -71,9 +139,9 @@ mpv $verbosity \
   --title="CU-SeeMe" \
   --x11-name="CU-SeeMe" \
   --vo=gpu \
-  --saturation=-100 \
-  --contrast=50 \
-  --vf=hflip \
+  --lavfi-complex="\
+    [vid1] extractplanes=y,hflip [gs];\
+    $(grayscale_4bit_filtergraph "gs" "vo")" \
   --demuxer-lavf-o=video_size=${resolution},framerate=${framerate},input_format=mjpeg \
   av://v4l2:${device}
 
