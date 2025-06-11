@@ -1,6 +1,8 @@
 # CU-SeeMe OpenBSD
 by Morgan Aldridge <morgant@makkintosshu.com>
 
+![CU-SeeMe screenshot of Morgan in his office](/img/screenshot-20250611-134556.png?raw=true)
+
 ## OVERVIEW
 
 This is a faux [CU-SeeMe](https://en.wikipedia.org/wiki/CU-SeeMe) webcam window which I use for [my Twitch streams](https://twitch.tv/makkintosshu). It's just a wrapper around `mpv` which I developed under [OpenBSD](https://www.openbsd.org/) to show the video feed from my USB webcam and emulate an original [Connectix QuickCam](https://en.wikipedia.org/wiki/QuickCam) (4-bit grayscale; 320x240 @ 15 fps) while forcing a custom title. It also includes [mlvwmrc](https://github.com/morgant/mlvwmrc) styles to further mimic CU-SeeMe when running under the [MLVWM](https://github.com/morgant/mlvwm) X11 window manager.
