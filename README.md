@@ -50,7 +50,8 @@ enough interest._
 
 * USB webcam or video capture device that supports UVC
 * OpenBSD
-* `mpv`
+* [`mpv`](https://openbsd.app/path/multimedia/mpv)
+* [`recordctl`](https://github.com/morgant/recordctl)
 
 ### Optional
 

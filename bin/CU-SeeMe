@@ -13,9 +13,9 @@
 #
 # LICENSE:
 #
-# Copyright (c) 2023-2025 Morgan Aldridge
+# Copyright (c) 2023-2026 Morgan T. Aldridge
 #
-# Permission is hereby granted, free of charge, to any person obtaining a copy 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 #  in the Software without restriction, including without limitation the rights
 # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
@@ -110,18 +110,27 @@ while [ $# -gt 0 ]; do
 done
 
 # enable video recording, as needed
-video_enabled=$(sysctl -n kern.video.record)
+video_enabled=$(recordctl -n record.video)
 if [ $video_enabled -ne 1 ] ; then
-  echo "Enabling kern.video.record..."
-  ! doas sysctl kern.video.record=1 && "ERROR: Unable to enable kern.video.record! Exiting." && exit 1
+  printf "Enabling video recording in the kernel... "
+  ! doas recordctl -q record.video=1 \
+    && printf "ERROR: Unable to enable video recording! Exiting.\n" >&2 \
+    && exit 1
+  printf "Done.\n"
 fi
 
-echo "Reconfiguring video input device..."
-video -d
-video white_balance_temperature=2500
-video backlight_compensation=0
+printf "Reconfiguring video device '%s'...\n"  "$device"
+if video -d \
+  && video white_balance_temperature=2500 \
+  && video backlight_compensation=0
+then
+  printf "Done.\n"
+else
+  printf "ERROR! Unable to configure video device! Exiting.\n" >&2 \
+    && exit 1
+fi
 
-echo "Opening CU-SeeMe..."
+printf "Opening CU-SeeMe window...\n"
 
 DISPLAY="${DISPLAY:-:0}" \
 mpv $verbosity \
@@ -136,7 +145,9 @@ mpv $verbosity \
   --geometry=${resolution}${x}${y} \
   --title="CU-SeeMe" \
   --x11-name="CU-SeeMe" \
-  --vo=gpu \
+  --container-fps-override="$framerate" \
+  --vo=gpu-next \
+  --hwdec=auto \
   --lavfi-complex="\
     [vid1] extractplanes=y,hflip [gs];\
     $(grayscale_4bit_filtergraph "gs" "vo")" \
@@ -145,6 +156,9 @@ mpv $verbosity \
 
 # disable video recording again, as needed
 if [ $video_enabled -ne 1 ] ; then
-  echo "Disabling kern.video.record..."
-  ! doas sysctl kern.video.record=0 && "ERROR: Unable to disable kern.video.record!"
+  printf "Disabling video recording in the kernel again... "
+  ! doas recordctl -q record.video=0 \
+    && printf "ERROR: Unable to disable video recording! Exiting.\n" \
+    && exit 1
+  printf "Done.\n"
 fi
