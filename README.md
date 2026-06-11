@@ -67,6 +67,31 @@ enough interest._
     `mpv` styles!_
 3. Restart your `mlvwm` window manager
 
+## USAGE
+
+On my setup (which the defaults are for), it's as simple as executing:
+
+```
+$ CU-SeeMe
+```
+
+### Options
+
+Some options are supported for when I'm experimenting with settings:
+
+* `-v`: increase verbosity (`-v -v` or `-vv` will show `mpv` output as well)
+* `-f`: specify video device input format; the default is `mjpeg`
+* `-h <api>`: specify a hardware decoding API to use (see `mpv` `--hwdec`
+    option); the default is `auto`, specifying `no` will disable hardware
+    decoding
+* `-i <device>`: specify the video input device; the default is `/dev/video`
+* `-o <driver>`: specify the video output driver to use (see `mpv` `--vo`
+    option); the default is `gpu-next`, though I often use `x11`
+* `-r <framerate>`: specify the video input & output framerate (i.e. frames
+    per second [FPS]); the default is `15`
+* `-s <size>`: specify the video output resolution as `<width>x<height>`; the
+    default is `320x240`
+
 ## RESOURCES
 
 * The original [CU-SeeMe website](https://ftp.icm.edu.pl/packages/cu-seeme/html/Welcome.html)

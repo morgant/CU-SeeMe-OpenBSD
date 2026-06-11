@@ -34,12 +34,16 @@
 # SOFTWARE.
 #
 
+verbose=false
 verbosity="--really-quiet"
 device="/dev/video"
+driver="gpu-next"
+hw_decode="auto"
 resolution="320x240"  # standard X11 geometry format, so 'WxH'
 x=-20                 # standard X11 geometry format, so '+X' means X from left and '-X' means X from right
 y=-40                 # standard X11 geometry format, so '+Y' means Y from top and '-Y' means Y from bottom
 framerate="15"
+format="mjpeg"
 
 # convert a 0..16 integer to a hex color string (e.g. "0xffffff")
 hex_gray() {
@@ -100,38 +104,55 @@ grayscale_4bit_filtergraph() {
     "$_out"
 }
 
-while [ $# -gt 0 ]; do
-  case $1 in
-    -v|--verbose)
-      verbosity="";
-      shift
+# parse command line options
+while getopts f:h:i:o:r:s:v _name; do
+  case $_name in
+    f) format="$OPTARG" ;;
+    h) hw_decode="$OPTARG" ;;
+    i) device="$OPTARG" ;;
+    o) driver="$OPTARG" ;;
+    r) framerate="$OPTARG" ;;
+    s) resolution="$OPTARG" ;;
+    v) 
+      if ! $verbose ; then
+        # start with just increasing CU-SeeMe verbosity
+        verbose=true
+      else
+        # otherwise increase verbosity of mpv
+        verbosity=""
+      fi
+      ;;
+    ?)
+      printf "Usage: %s [ -h | -v ] [ -i device ] [ -o driver ]\n" \
+        "$(basename "$0")"
+      exit 2
       ;;
   esac
 done
+shift $(($OPTIND - 1))
 
 # enable video recording, as needed
 video_enabled=$(recordctl -n record.video)
 if [ $video_enabled -ne 1 ] ; then
-  printf "Enabling video recording in the kernel... "
+  $verbose && printf "Enabling video recording in the kernel... "
   ! doas recordctl -q record.video=1 \
     && printf "ERROR: Unable to enable video recording! Exiting.\n" >&2 \
     && exit 1
-  printf "Done.\n"
+  $verbose && printf "Done.\n"
 fi
 
-printf "Reconfiguring video device '%s'...\n"  "$device"
+$verbose && printf "Reconfiguring video device '%s'...\n"  "$device"
 if video -d \
   && video white_balance_temperature=2500 \
   && video backlight_compensation=0
 then
-  printf "Done.\n"
+  $verbose && printf "Done.\n"
 else
   printf "ERROR! Unable to configure video device! Exiting.\n" >&2 \
     && exit 1
 fi
 
-printf "Opening CU-SeeMe window...\n"
-
+$verbose && printf "Opening CU-SeeMe window ('%s')...\n" "$device"
 DISPLAY="${DISPLAY:-:0}" \
 mpv $verbosity \
   --no-hidpi-window-scale \
@@ -146,19 +167,19 @@ mpv $verbosity \
   --title="CU-SeeMe" \
   --x11-name="CU-SeeMe" \
   --container-fps-override="$framerate" \
-  --vo=gpu-next \
-  --hwdec=auto \
+  --vo="$driver" \
+  --hwdec="$hw_dec" \
   --lavfi-complex="\
     [vid1] extractplanes=y,hflip [gs];\
     $(grayscale_4bit_filtergraph "gs" "vo")" \
-  --demuxer-lavf-o=video_size=${resolution},framerate=${framerate},input_format=mjpeg \
+  --demuxer-lavf-o=video_size=${resolution},framerate=${framerate},input_format=${format} \
   av://v4l2:${device}
 
 # disable video recording again, as needed
 if [ $video_enabled -ne 1 ] ; then
-  printf "Disabling video recording in the kernel again... "
+  $verbose && printf "Disabling video recording in the kernel again... "
   ! doas recordctl -q record.video=0 \
     && printf "ERROR: Unable to disable video recording! Exiting.\n" \
     && exit 1
-  printf "Done.\n"
+  $verbose && printf "Done.\n"
 fi
