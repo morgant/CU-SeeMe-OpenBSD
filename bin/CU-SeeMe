@@ -107,13 +107,30 @@ grayscale_4bit_filtergraph() {
 }
 
 # parse command line options
-while getopts f:h:i:mo:r:s:v _name; do
+while getopts f:h:i:mo:p:r:s:v _name; do
   case $_name in
     f) format="$OPTARG" ;;
     h) hw_decode="$OPTARG" ;;
     i) device="$OPTARG" ;;
     m) mirror=",hflip" ;;
     o) driver="$OPTARG" ;;
+    p)
+      _pattern="^([+-]+[[:digit:]]+)([+-]+[[:digit:]]+)$"
+      x="$(echo "$OPTARG" | sed -E "s/${_pattern}/\1/")"
+      y="$(echo "$OPTARG" | sed -E "s/${_pattern}/\2/")"
+      if [ -z "$x" ] || [ -z "$y" ] ; then
+        printf \
+          "ERROR! Invalid window position option ('-p') value '%s'! Exiting.\n" \
+          "$OPTARG" >&2
+        exit 2
+      fi
+      $verbose && \
+        printf \
+          "Parsed window position option ('-p') value '%s' as: X = '%s'; Y = '%s'\n" \
+          "$OPTARG" \
+          "$x" \
+          "$y"
+      ;;
     r) framerate="$OPTARG" ;;
     s) resolution="$OPTARG" ;;
     v) 
