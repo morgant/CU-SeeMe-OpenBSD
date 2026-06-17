@@ -34,16 +34,18 @@
 # SOFTWARE.
 #
 
+# defaults
 verbose=false
 verbosity="--really-quiet"
 device="/dev/video"
-driver="gpu-next"
-hw_decode="auto"
+driver="gpu-next,gpu,xv,x11"
+hw_decode="vaapi,vulkan,auto"
 resolution="320x240"  # standard X11 geometry format, so 'WxH'
 x=-20                 # standard X11 geometry format, so '+X' means X from left and '-X' means X from right
 y=-40                 # standard X11 geometry format, so '+Y' means Y from top and '-Y' means Y from bottom
 framerate="15"
 format="mjpeg"
+mirror=""
 
 # convert a 0..16 integer to a hex color string (e.g. "0xffffff")
 hex_gray() {
@@ -105,11 +107,12 @@ grayscale_4bit_filtergraph() {
 }
 
 # parse command line options
-while getopts f:h:i:o:r:s:v _name; do
+while getopts f:h:i:mo:r:s:v _name; do
   case $_name in
     f) format="$OPTARG" ;;
     h) hw_decode="$OPTARG" ;;
     i) device="$OPTARG" ;;
+    m) mirror=",hflip" ;;
     o) driver="$OPTARG" ;;
     r) framerate="$OPTARG" ;;
     s) resolution="$OPTARG" ;;
@@ -123,7 +126,8 @@ while getopts f:h:i:o:r:s:v _name; do
       fi
       ;;
     ?)
-      printf "Usage: %s [ -h | -v ] [ -i device ] [ -o driver ]\n" \
+      printf \
+        "Usage: %s [ -h | -v | -m ] [ -i device ] [ -o driver ]\n" \
         "$(basename "$0")"
       exit 2
       ;;
@@ -170,7 +174,7 @@ mpv $verbosity \
   --vo="$driver" \
   --hwdec="$hw_dec" \
   --lavfi-complex="\
-    [vid1] extractplanes=y,hflip [gs];\
+    [vid1] extractplanes=y${mirror} [gs];\
     $(grayscale_4bit_filtergraph "gs" "vo")" \
   --demuxer-lavf-o=video_size=${resolution},framerate=${framerate},input_format=${format} \
   av://v4l2:${device}
