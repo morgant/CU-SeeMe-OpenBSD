@@ -35,6 +35,7 @@
 #
 
 # defaults
+export DISPLAY="${DISPLAY:-:0}"
 verbose=false
 verbosity="--really-quiet"
 device="/dev/video"
@@ -46,6 +47,10 @@ y=-40                 # standard X11 geometry format, so '+Y' means Y from top a
 framerate="15"
 format="mjpeg"
 mirror=""
+video_enabled=""
+
+# traps
+trap "pkill -P $$ ; disable_recording" TERM
 
 # convert a 0..16 integer to a hex color string (e.g. "0xffffff")
 hex_gray() {
@@ -106,6 +111,33 @@ grayscale_4bit_filtergraph() {
     "$_out"
 }
 
+enable_recording() {
+  $verbose && printf "Enabling video recording in the kernel... "
+  video_enabled=$(recordctl -n record.video)
+  if [ $video_enabled -eq 1 ] ; then
+    $verbose && printf "Already enabled.\n"
+    return
+  fi
+
+  if ! doas recordctl -q record.video=1 ; then
+    printf "ERROR: Unable to enable video recording! Exiting.\n" >&2
+    exit 1
+  fi
+  $verbose && printf "Done.\n"
+}
+
+disable_recording() {
+  # don't disable if it was enabled to begin with
+  [ $video_enabled -eq 1 ] && return
+
+  $verbose && printf "Disabling video recording in the kernel... "
+  if ! doas recordctl -q record.video=0 ; then
+    printf "ERROR: Unable to disable video recording! Exiting.\n" >&2
+    exit 1
+  fi
+  $verbose && printf "Done.\n"
+}
+
 # parse command line options
 while getopts f:h:i:mo:p:r:s:v _name; do
   case $_name in
@@ -144,7 +176,7 @@ while getopts f:h:i:mo:p:r:s:v _name; do
       ;;
     ?)
       printf \
-        "Usage: %s [ -h | -v | -m ] [ -i device ] [ -o driver ]\n" \
+        "Usage: %s [ -v | -m ] [ -f device_format ] [ -h hw_decoder ] [ -i device ] [ -o driver ] [ -p [+-]X[+-]Y ] [ -r fps ] [ -s WxH ]\n" \
         "$(basename "$0")"
       exit 2
       ;;
@@ -153,14 +185,7 @@ done
 shift $(($OPTIND - 1))
 
 # enable video recording, as needed
-video_enabled=$(recordctl -n record.video)
-if [ $video_enabled -ne 1 ] ; then
-  $verbose && printf "Enabling video recording in the kernel... "
-  ! doas recordctl -q record.video=1 \
-    && printf "ERROR: Unable to enable video recording! Exiting.\n" >&2 \
-    && exit 1
-  $verbose && printf "Done.\n"
-fi
+enable_recording
 
 $verbose && printf "Reconfiguring video device '%s'...\n"  "$device"
 if video -d \
@@ -169,12 +194,11 @@ if video -d \
 then
   $verbose && printf "Done.\n"
 else
-  printf "ERROR! Unable to configure video device! Exiting.\n" >&2 \
-    && exit 1
+  printf "ERROR! Unable to configure video device! Exiting.\n" >&2
+  exit 1
 fi
 
-$verbose && printf "Opening CU-SeeMe window ('%s')...\n" "$device"
-DISPLAY="${DISPLAY:-:0}" \
+$verbose && printf "Opening CU-SeeMe window for video device '%s'...\n" "$device"
 mpv $verbosity \
   --no-hidpi-window-scale \
   --profile=low-latency \
@@ -189,18 +213,19 @@ mpv $verbosity \
   --x11-name="CU-SeeMe" \
   --container-fps-override="$framerate" \
   --vo="$driver" \
-  --hwdec="$hw_dec" \
+  --hwdec="$hw_decode" \
   --lavfi-complex="\
     [vid1] extractplanes=y${mirror} [gs];\
     $(grayscale_4bit_filtergraph "gs" "vo")" \
   --demuxer-lavf-o=video_size=${resolution},framerate=${framerate},input_format=${format} \
-  av://v4l2:${device}
+  av://v4l2:${device} &
+_mpv_pid=$!
+
+# wait for mpv to exit
+while true ; do
+  ! ps -p $_mpv_pid 2>&1 >/dev/null && break
+  sleep 1
+done
 
 # disable video recording again, as needed
-if [ $video_enabled -ne 1 ] ; then
-  $verbose && printf "Disabling video recording in the kernel again... "
-  ! doas recordctl -q record.video=0 \
-    && printf "ERROR: Unable to disable video recording! Exiting.\n" \
-    && exit 1
-  $verbose && printf "Done.\n"
-fi
+disable_recording

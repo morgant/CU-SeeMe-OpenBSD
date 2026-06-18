@@ -80,17 +80,21 @@ $ CU-SeeMe
 Some options are supported for when I'm experimenting with settings:
 
 * `-v`: increase verbosity (`-v -v` or `-vv` will show `mpv` output as well)
-* `-f`: specify video device input format; the default is `mjpeg`
+* `-f`: specify video device input format; default: `mjpeg`
 * `-h <api>`: specify a hardware decoding API to use (see `mpv` `--hwdec`
-    option); the default is `auto`, specifying `no` will disable hardware
-    decoding
-* `-i <device>`: specify the video input device; the default is `/dev/video`
+    option); default is `auto`, specifying `no` will disable hardware decoding
+* `-i <device>`: specify the video input device; default: `/dev/video`
+* `-m`: mirror (horizontal flip) video output; default: not mirrored
 * `-o <driver>`: specify the video output driver to use (see `mpv` `--vo`
-    option); the default is `gpu-next`, though I often use `x11`
+    option); default is `gpu-next`, though I often use `x11`
+* `-p <offset>`: specify the window's placement on the screen as
+    `[+-]<x>[+-]<y>` (`+` is relative to left/top; `-` is relative to right/
+    bottom; e.g. `+20-20` is 20px from the left and 20px from the bottom);
+    default: `-20-20` (e.g. 20px from the right and 20px from the bottom);
 * `-r <framerate>`: specify the video input & output framerate (i.e. frames
-    per second [FPS]); the default is `15`
-* `-s <size>`: specify the video output resolution as `<width>x<height>`; the
-    default is `320x240`
+    per second [FPS]); default: `15`
+* `-s <size>`: specify the video input & output resolution as
+    `<width>x<height>`; default: `320x240`
 
 ## RESOURCES
 
